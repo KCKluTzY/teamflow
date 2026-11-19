@@ -1,0 +1,232 @@
+@startuml TeamFlow_ClassDiagram
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty methods
+
+abstract class BaseEntity <<MappedSuperclass>> {
+  id : UUID
+  createdAt : Instant
+}
+note right of BaseEntity
+  Toutes les entités en héritent
+  (héritage non dessiné pour la lisibilité).
+  ? = optionnel, / = dérivé.
+end note
+
+package "user" {
+  class User {
+    email : String(255)
+    passwordHash : String(60)
+    firstName : String(100)
+    lastName : String(100)
+    enabled : boolean
+    updatedAt : Instant
+  }
+}
+
+package "auth" {
+  class RefreshToken {
+    tokenHash : String(64)
+    familyId : UUID
+    expiresAt : Instant
+    revokedAt : Instant?
+    /active : boolean
+  }
+}
+
+package "organization" {
+  enum OrganizationRole {
+    OWNER
+    ADMIN
+    MEMBER
+  }
+  class Organization {
+    name : String(100)
+    description : String(500)?
+    updatedAt : Instant
+  }
+  class OrganizationMember {
+    role : OrganizationRole
+    joinedAt : Instant
+  }
+}
+
+package "team" {
+  enum TeamRole {
+    TEAM_LEAD
+    MEMBER
+  }
+  class Team {
+    name : String(100)
+    description : String(500)?
+    updatedAt : Instant
+  }
+  class TeamMember {
+    role : TeamRole
+    joinedAt : Instant
+  }
+}
+
+package "project" {
+  enum ProjectRole {
+    MANAGER
+    MEMBER
+    VIEWER
+  }
+  enum ProjectStatus {
+    ACTIVE
+    ARCHIVED
+  }
+  class Project {
+    key : String(5)
+    name : String(100)
+    description : String(2000)?
+    status : ProjectStatus
+    archivedAt : Instant?
+    taskCounter : int
+    updatedAt : Instant
+  }
+  class ProjectMember {
+    role : ProjectRole
+    joinedAt : Instant
+  }
+}
+
+package "sprint" {
+  enum SprintStatus {
+    PLANNED
+    ACTIVE
+    COMPLETED
+  }
+  class Sprint {
+    name : String(100)
+    goal : String(500)?
+    startDate : LocalDate
+    endDate : LocalDate
+    status : SprintStatus
+    startedAt : Instant?
+    completedAt : Instant?
+    updatedAt : Instant
+    version : long
+  }
+}
+
+package "task" {
+  enum TaskStatus {
+    TODO
+    IN_PROGRESS
+    IN_REVIEW
+    DONE
+  }
+  enum TaskPriority {
+    LOW
+    MEDIUM
+    HIGH
+    CRITICAL
+  }
+  class Task {
+    number : int
+    title : String(200)
+    description : String(5000)?
+    status : TaskStatus
+    priority : TaskPriority
+    dueDate : LocalDate?
+    position : int
+    updatedAt : Instant
+    version : long
+    /key : String
+    /overdue : boolean
+  }
+}
+
+package "comment" {
+  class Comment {
+    content : String(2000)
+    editedAt : Instant?
+  }
+}
+
+package "notification" {
+  enum NotificationType {
+    TASK_ASSIGNED
+    TASK_STATUS_CHANGED
+    COMMENT_ADDED
+    ADDED_TO_PROJECT
+  }
+  class Notification {
+    type : NotificationType
+    message : String(255)
+    readAt : Instant?
+    /read : boolean
+  }
+}
+
+' ===== Relations =====
+User "1" *-- "0..*" RefreshToken : possède
+Organization "1" *-- "1..*" OrganizationMember : membres
+OrganizationMember "0..*" --> "1" User
+Organization "1" *-- "0..*" Team
+Team "1" *-- "0..*" TeamMember : membres
+TeamMember "0..*" --> "1" User
+Organization "1" *-- "0..*" Project
+Project "0..*" --> "1" User : createdBy
+Project "1" *-- "1..*" ProjectMember : membres
+ProjectMember "0..*" --> "1" User
+Project "1" *-- "0..*" Sprint
+Project "1" *-- "0..*" Task
+Sprint "0..1" o-- "0..*" Task : contient
+Task "0..*" --> "0..1" User : assignee
+Task "0..*" --> "1" User : reporter
+Task "1" *-- "0..*" Comment
+Comment "0..*" --> "1" User : auteur
+Notification "0..*" --> "1" User : recipient
+Notification "0..*" --> "0..1" User : triggeredBy
+Notification "0..*" --> "1" Project
+Notification "0..*" --> "0..1" Task
+
+' ===== Contraintes =====
+note bottom of OrganizationMember
+  {unique (organization, user)}
+  inv : ≥ 1 membre de rôle OWNER par organisation
+end note
+
+note bottom of ProjectMember
+  {unique (project, user)}
+  inv : ≥ 1 membre de rôle MANAGER par projet
+  inv : user ∈ membres de project.organization
+end note
+
+note bottom of TeamMember
+  {unique (team, user)}
+  inv : user ∈ membres de team.organization
+end note
+
+note bottom of Project
+  {unique (organization, key)}
+  key : ^[A-Z][A-Z0-9]{1,4}$, immuable
+  ARCHIVED ⇒ lecture seule
+end note
+
+note bottom of Sprint
+  inv : startDate ≤ endDate
+  inv : au plus un sprint ACTIVE par projet
+  COMPLETED ⇒ immuable
+end note
+
+note bottom of Task
+  {unique (project, number)}
+  {unique (project, status, position)} DEFERRABLE
+  inv : sprint.project = project
+  inv : sprint.status ≠ COMPLETED
+  inv : assignee ∈ ProjectMember explicites du projet
+  /key = project.key + "-" + number
+  /overdue = dueDate < today ∧ status ≠ DONE
+end note
+
+note bottom of RefreshToken
+  {unique tokenHash} ; index (familyId)
+  /active = revokedAt = null ∧ expiresAt > now
+  validité : 7 jours, rotation à chaque usage
+end note
+@enduml

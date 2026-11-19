@@ -1,0 +1,298 @@
+@startuml TeamFlow_UseCases
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #FFFFFF
+  BorderColor #3F51B5
+}
+
+' ===================== ACTEURS =====================
+actor "Visiteur" as VIS
+actor "Utilisateur\nauthentifié" as USR
+actor "Membre\nd'organisation" as ORG_MEM
+actor "Admin\nd'organisation" as ORG_ADM
+actor "Owner\nd'organisation" as ORG_OWN
+actor "Viewer\nde projet" as PRJ_VIE
+actor "Membre\nde projet" as PRJ_MEM
+actor "Manager\nde projet" as PRJ_MAN
+actor "Système" as SYS
+
+' Généralisations : deux hiérarchies indépendantes (organisation / projet)
+ORG_MEM --|> USR
+ORG_ADM --|> ORG_MEM
+ORG_OWN --|> ORG_ADM
+PRJ_VIE --|> USR
+PRJ_MEM --|> PRJ_VIE
+PRJ_MAN --|> PRJ_MEM
+
+note as N_AUTHZ
+  Droits implicites OWNER/ADMIN sur les projets de leur organisation :
+  règle d'autorisation (RG-AUTHZ-01), pas un héritage entre acteurs.
+end note
+ORG_ADM .. N_AUTHZ
+PRJ_MAN .. N_AUTHZ
+
+' ===================== AUTHENTIFICATION =====================
+rectangle "Authentification et profil" {
+  usecase "S'inscrire" as AUT_01
+  usecase "Se connecter" as AUT_02
+  usecase "Rafraîchir la session" as AUT_03
+  usecase "Se déconnecter" as AUT_04
+  usecase "Consulter son profil" as USR_01
+  usecase "Modifier son profil" as USR_02
+  usecase "Changer son mot de passe" as USR_03
+}
+
+' ===================== ORGANISATIONS =====================
+rectangle "Organisations" {
+  usecase "Créer une organisation" as ORG_01
+  usecase "Lister mes organisations" as ORG_02
+  usecase "Consulter une organisation" as ORG_03
+  usecase "Modifier une organisation" as ORG_04
+  usecase "Consulter les membres" as ORG_05
+  usecase "Ajouter un membre" as ORG_06
+  usecase "Changer le rôle d'un membre" as ORG_07
+  usecase "Retirer un membre" as ORG_08
+  usecase "Quitter l'organisation" as ORG_09
+  usecase "Transférer la propriété" as ORG_10
+  usecase "Réaffecter les responsabilités" as ORG_11
+}
+
+' ===================== ÉQUIPES =====================
+rectangle "Équipes" {
+  usecase "Consulter les équipes" as TEA_01
+  usecase "Créer une équipe" as TEA_02
+  usecase "Modifier une équipe" as TEA_03
+  usecase "Supprimer une équipe" as TEA_04
+  usecase "Gérer les membres d'une équipe" as TEA_05
+}
+
+' ===================== PROJETS =====================
+rectangle "Projets" {
+  usecase "Créer un projet" as PRJ_01
+  usecase "Lister les projets" as PRJ_02
+  usecase "Consulter un projet" as PRJ_03
+  usecase "Modifier un projet" as PRJ_04
+  usecase "Archiver un projet" as PRJ_05
+  usecase "Désarchiver un projet" as PRJ_06
+  usecase "Consulter les membres du projet" as PRJ_07
+  usecase "Ajouter un membre au projet" as PRJ_08
+  usecase "Changer le rôle d'un membre\ndu projet" as PRJ_09
+  usecase "Retirer un membre du projet" as PRJ_10
+  usecase "Quitter le projet" as PRJ_11
+}
+
+' ===================== TÂCHES =====================
+rectangle "Tâches" {
+  usecase "Lister / filtrer les tâches" as TSK_01
+  usecase "Consulter une tâche" as TSK_02
+  usecase "Créer une tâche" as TSK_03
+  usecase "Modifier une tâche" as TSK_04
+  usecase "Assigner une tâche" as TSK_05
+  usecase "Changer le statut d'une tâche" as TSK_06
+  usecase "Supprimer une tâche" as TSK_07
+}
+
+' ===================== KANBAN =====================
+' KAN_02 (filtre de périmètre) fusionné dans KAN_01 ; KAN_04 (réorganisation
+' des positions) devient une étape interne de KAN_03. Identifiants non réutilisés.
+rectangle "Kanban" {
+  usecase "Consulter le tableau Kanban\n(filtre : sprint actif, backlog,\ntous les sprints, sprint précis)" as KAN_01
+  usecase "Déplacer une tâche\n(drag & drop)" as KAN_03
+}
+
+' ===================== SPRINTS & BACKLOG =====================
+rectangle "Sprints et backlog" {
+  usecase "Consulter les sprints" as SPR_01
+  usecase "Créer un sprint" as SPR_02
+  usecase "Modifier un sprint" as SPR_03
+  usecase "Supprimer un sprint planifié" as SPR_04
+  usecase "Démarrer un sprint" as SPR_05
+  usecase "Clôturer un sprint" as SPR_06
+  usecase "Consulter l'avancement\nd'un sprint" as SPR_07
+  usecase "Consulter le backlog" as SPR_08
+  usecase "Affecter une tâche à un sprint" as SPR_09
+  usecase "Retirer une tâche d'un sprint" as SPR_10
+  usecase "Replanifier les tâches\nnon terminées" as SPR_11
+}
+
+' ===================== COMMENTAIRES =====================
+rectangle "Commentaires" {
+  usecase "Consulter les commentaires" as COM_01
+  usecase "Ajouter un commentaire" as COM_02
+  usecase "Modifier son commentaire" as COM_03
+  usecase "Supprimer un commentaire" as COM_04
+}
+
+' ===================== DASHBOARD =====================
+rectangle "Dashboard" {
+  usecase "Consulter le dashboard d'un projet" as DSH_01
+  usecase "Consulter mes tâches assignées" as DSH_02
+}
+
+' ===================== NOTIFICATIONS =====================
+rectangle "Notifications" {
+  usecase "Consulter mes notifications" as NOT_01
+  usecase "Marquer une notification comme lue" as NOT_02
+  usecase "Marquer toutes comme lues" as NOT_03
+  usecase "Générer les notifications" as NOT_04
+}
+
+' ===================== ASSOCIATIONS =====================
+' Authentification et profil
+VIS --> AUT_01
+VIS --> AUT_02
+USR --> AUT_03
+USR --> AUT_04
+USR --> USR_01
+USR --> USR_02
+USR --> USR_03
+
+' Organisations
+USR --> ORG_01
+USR --> ORG_02
+ORG_MEM --> ORG_03
+ORG_MEM --> ORG_05
+ORG_MEM --> ORG_09
+ORG_ADM --> ORG_04
+ORG_ADM --> ORG_06
+ORG_ADM --> ORG_07
+ORG_ADM --> ORG_08
+ORG_OWN --> ORG_10
+ORG_OWN --> ORG_11
+PRJ_MAN --> ORG_11
+
+' Équipes
+ORG_MEM --> TEA_01
+ORG_ADM --> TEA_02
+ORG_ADM --> TEA_03
+ORG_ADM --> TEA_04
+ORG_ADM --> TEA_05
+
+' Projets
+ORG_ADM --> PRJ_01
+ORG_MEM --> PRJ_02
+PRJ_VIE --> PRJ_03
+PRJ_VIE --> PRJ_07
+PRJ_VIE --> PRJ_11
+PRJ_MAN --> PRJ_04
+PRJ_MAN --> PRJ_05
+PRJ_MAN --> PRJ_06
+PRJ_MAN --> PRJ_08
+PRJ_MAN --> PRJ_09
+PRJ_MAN --> PRJ_10
+
+' Tâches
+PRJ_VIE --> TSK_01
+PRJ_VIE --> TSK_02
+PRJ_MEM --> TSK_03
+PRJ_MEM --> TSK_04
+PRJ_MEM --> TSK_05
+PRJ_MEM --> TSK_06
+PRJ_MEM --> TSK_07
+
+' Kanban
+PRJ_VIE --> KAN_01
+PRJ_MEM --> KAN_03
+
+' Sprints et backlog
+PRJ_VIE --> SPR_01
+PRJ_VIE --> SPR_07
+PRJ_VIE --> SPR_08
+PRJ_MAN --> SPR_02
+PRJ_MAN --> SPR_03
+PRJ_MAN --> SPR_04
+PRJ_MAN --> SPR_05
+PRJ_MAN --> SPR_06
+PRJ_MEM --> SPR_09
+PRJ_MEM --> SPR_10
+
+' Commentaires
+PRJ_VIE --> COM_01
+PRJ_MEM --> COM_02
+PRJ_MEM --> COM_03
+PRJ_MEM --> COM_04
+
+' Dashboard
+PRJ_VIE --> DSH_01
+USR --> DSH_02
+
+' Notifications
+USR --> NOT_01
+USR --> NOT_02
+USR --> NOT_03
+SYS --> NOT_04
+
+' ===================== INCLUDE / EXTEND =====================
+SPR_06 ..> SPR_11 : <<include>>
+ORG_11 ..> ORG_08 : <<extend>>
+ORG_11 ..> ORG_09 : <<extend>>
+
+' ===================== NOTES =====================
+note right of ORG_07
+  Dernier OWNER : rétrogradation refusée (RG-ORG-04).
+  ADMIN : uniquement les MEMBER ; ADMIN/OWNER : OWNER requis (RG-ORG-06).
+end note
+
+note right of ORG_08
+  Même règle de hiérarchie que ORG_07.
+  Un membre ne peut être retiré qu'une fois
+  ses responsabilités bloquantes réaffectées.
+  Aucun projet n'est jamais supprimé (RG-ORG-07).
+end note
+
+note right of ORG_11
+  Condition d'extension : le membre retiré ou sortant est
+  - dernier OWNER de l'organisation, ou
+  - seul MANAGER explicite d'au moins un projet.
+  Sinon : retrait direct, sans réaffectation.
+  Réalisé via ORG_10 / ORG_07 (OWNER) et PRJ_08 / PRJ_09 (MANAGER).
+end note
+
+note right of PRJ_11
+  Le seul MANAGER du projet ne peut pas le quitter :
+  il doit d'abord désigner un autre MANAGER (RG-PRJ-07).
+end note
+
+note right of TSK_03
+  L'assignation est un champ optionnel du formulaire ;
+  elle applique les règles de TSK_05 (RG-TSK-03).
+end note
+
+note right of TSK_07
+  MANAGER : toute tâche.
+  MEMBER : uniquement s'il est le reporter.
+end note
+
+note right of KAN_03
+  Scénario : 1) vérifier les droits et le projet non archivé ;
+  2) si la colonne cible diffère, appliquer le changement
+  de statut (règles de TSK_06) ; 3) réordonner les positions
+  des colonnes source et cible. Étapes 2 et 3 dans une
+  seule transaction, sans doublon ni trou (RG-TSK-06).
+end note
+
+note right of SPR_03
+  PLANNED : nom, objectif, dates modifiables.
+  ACTIVE : nom, objectif, date de fin ; date de début figée.
+  COMPLETED : immuable (RG-SPR-07).
+end note
+
+note right of SPR_06
+  Transaction unique, tout ou rien (RG-SPR-05) :
+  tâches non DONE vers le backlog ou un sprint PLANNED choisi,
+  puis passage du sprint en COMPLETED.
+end note
+
+note right of COM_04
+  Auteur ou MANAGER (RG-COM-01).
+end note
+
+note right of NOT_04
+  Déclenchée par des événements métier : tâche assignée,
+  statut modifié, commentaire ajouté, ajout à un projet.
+  N'est jamais envoyée à l'auteur de l'action (RG-NOT-01).
+end note
+
+@enduml

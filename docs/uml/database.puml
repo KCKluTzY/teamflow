@@ -1,0 +1,212 @@
+@startuml TeamFlow_Database
+hide circle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+' Convention : * = NOT NULL ; <<PK>> clé primaire ; <<FK>> clé étrangère ; <<UQ>> unicité
+' Les clés étrangères composites sont décrites dans les notes (voir aussi la doc du modèle relationnel).
+
+entity app_user {
+  * id : uuid <<PK>>
+  --
+  * email : varchar(255) <<UQ>>
+  * password_hash : varchar(60)
+  * first_name : varchar(100)
+  * last_name : varchar(100)
+  * enabled : boolean
+  * created_at : timestamptz
+  * updated_at : timestamptz
+}
+
+entity refresh_token {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  * token_hash : char(64) <<UQ>>
+  * family_id : uuid
+  * created_at : timestamptz
+  * expires_at : timestamptz
+  revoked_at : timestamptz
+}
+
+entity organization {
+  * id : uuid <<PK>>
+  --
+  * name : varchar(100)
+  description : varchar(500)
+  * created_at : timestamptz
+  * updated_at : timestamptz
+}
+
+entity organization_member {
+  * id : uuid <<PK>>
+  --
+  * organization_id : uuid <<FK>>
+  * user_id : uuid <<FK>>
+  * role : varchar(10)
+  * joined_at : timestamptz
+  <<UQ>> (organization_id, user_id)
+}
+
+entity team {
+  * id : uuid <<PK>>
+  --
+  * organization_id : uuid <<FK>>
+  * name : varchar(100)
+  description : varchar(500)
+  * created_at : timestamptz
+  * updated_at : timestamptz
+  <<UQ>> (id, organization_id)
+}
+
+entity team_member {
+  * id : uuid <<PK>>
+  --
+  * team_id : uuid <<FK>>
+  * organization_id : uuid <<FK>>
+  * user_id : uuid <<FK>>
+  * role : varchar(10)
+  * joined_at : timestamptz
+  <<UQ>> (team_id, user_id)
+}
+
+entity project {
+  * id : uuid <<PK>>
+  --
+  * organization_id : uuid <<FK>>
+  * project_key : varchar(5)
+  * name : varchar(100)
+  description : varchar(2000)
+  * status : varchar(10)
+  archived_at : timestamptz
+  * task_counter : integer
+  * created_by : uuid <<FK>>
+  * created_at : timestamptz
+  * updated_at : timestamptz
+  <<UQ>> (organization_id, project_key)
+  <<UQ>> (id, organization_id)
+}
+
+entity project_member {
+  * id : uuid <<PK>>
+  --
+  * project_id : uuid <<FK>>
+  * organization_id : uuid <<FK>>
+  * user_id : uuid <<FK>>
+  * role : varchar(10)
+  * joined_at : timestamptz
+  <<UQ>> (project_id, user_id)
+}
+
+entity sprint {
+  * id : uuid <<PK>>
+  --
+  * project_id : uuid <<FK>>
+  * name : varchar(100)
+  goal : varchar(500)
+  * start_date : date
+  * end_date : date
+  * status : varchar(10)
+  started_at : timestamptz
+  completed_at : timestamptz
+  * version : bigint
+  * created_at : timestamptz
+  * updated_at : timestamptz
+  <<UQ>> (id, project_id)
+}
+
+entity task {
+  * id : uuid <<PK>>
+  --
+  * project_id : uuid <<FK>>
+  sprint_id : uuid <<FK>>
+  * task_number : integer
+  * title : varchar(200)
+  description : varchar(5000)
+  * status : varchar(12)
+  * priority : varchar(8)
+  due_date : date
+  * position : integer
+  assignee_id : uuid <<FK>>
+  * reporter_id : uuid <<FK>>
+  * version : bigint
+  * created_at : timestamptz
+  * updated_at : timestamptz
+  <<UQ>> (project_id, task_number)
+  <<UQ, DEFERRABLE>> (project_id, status, position)
+}
+
+entity task_comment {
+  * id : uuid <<PK>>
+  --
+  * task_id : uuid <<FK>>
+  * author_id : uuid <<FK>>
+  * content : varchar(2000)
+  edited_at : timestamptz
+  * created_at : timestamptz
+}
+
+entity notification {
+  * id : uuid <<PK>>
+  --
+  * recipient_id : uuid <<FK>>
+  triggered_by_id : uuid <<FK>>
+  * project_id : uuid <<FK>>
+  task_id : uuid <<FK>>
+  * type : varchar(20)
+  * message : varchar(255)
+  read_at : timestamptz
+  * created_at : timestamptz
+}
+
+' ===================== RELATIONS =====================
+app_user ||--o{ refresh_token : possède
+app_user ||--o{ organization_member : est membre
+organization ||--|{ organization_member : a pour membres
+organization ||--o{ team
+organization ||--o{ project
+team ||--o{ team_member
+organization_member ||--o{ team_member : (organization_id, user_id)
+project ||--|{ project_member
+organization_member ||--o{ project_member : (organization_id, user_id)
+app_user ||--o{ project : created_by
+project ||--o{ sprint
+project ||--o{ task
+sprint |o--o{ task : (sprint_id, project_id)
+project_member |o--o{ task : assignee (project_id, assignee_id)
+app_user ||--o{ task : reporter
+task ||--o{ task_comment
+app_user ||--o{ task_comment : auteur
+app_user ||--o{ notification : recipient
+app_user |o--o{ notification : triggered_by
+project ||--o{ notification
+task |o--o{ notification
+
+' ===================== NOTES =====================
+note right of project_member
+  FK composites :
+  (project_id, organization_id) -> project(id, organization_id)
+  (organization_id, user_id) -> organization_member(organization_id, user_id) ON DELETE CASCADE
+  => un membre de projet appartient forcément à l'organisation du projet.
+end note
+
+note right of team_member
+  FK composites :
+  (team_id, organization_id) -> team(id, organization_id)
+  (organization_id, user_id) -> organization_member(organization_id, user_id) ON DELETE CASCADE
+end note
+
+note right of task
+  FK composites :
+  (project_id, assignee_id) -> project_member(project_id, user_id)
+    ON DELETE SET NULL (assignee_id)
+  (sprint_id, project_id) -> sprint(id, project_id)
+    ON DELETE SET NULL (sprint_id)
+  Unicité (project_id, status, position) : DEFERRABLE INITIALLY DEFERRED
+end note
+
+note bottom of sprint
+  Index unique partiel : un seul sprint ACTIVE par projet
+  (project_id) WHERE status = 'ACTIVE'
+end note
+@enduml
