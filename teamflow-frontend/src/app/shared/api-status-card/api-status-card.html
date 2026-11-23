@@ -1,0 +1,22 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>État de l'API</mat-card-title>
+    <mat-card-subtitle>Backend TeamFlow</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content aria-live="polite">
+    @switch (status()) {
+      @case ('UP') {
+        <span class="badge badge--up">En ligne</span>
+      }
+      @case ('DOWN') {
+        <span class="badge badge--down">Dégradée</span>
+      }
+      @case ('UNREACHABLE') {
+        <span class="badge badge--down">Injoignable</span>
+      }
+      @default {
+        <span class="badge">Vérification en cours…</span>
+      }
+    }
+  </mat-card-content>
+</mat-card>
