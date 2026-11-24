@@ -1,0 +1,1 @@
+![CI](https://github.com/KCKluTzY/teamflow/actions/workflows/ci.yml/badge.svg)
